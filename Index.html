@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SCD-FE — Diagrama de Conexiones Electronicas</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#EEF2F7;font-family:'Arial',sans-serif;overflow:hidden;user-select:none;}
+
+#wrap{width:100vw;height:100vh;overflow:hidden;cursor:grab;position:relative;}
+#wrap:active{cursor:grabbing;}
+
+/* Toolbar */
+.toolbar{
+  position:fixed;top:12px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;
+  background:white;padding:8px 18px;border-radius:24px;
+  box-shadow:0 2px 16px rgba(0,0,0,.18);z-index:100;
+}
+.toolbar span{font-size:14px;font-weight:700;color:#1E293B;margin-right:8px;}
+.tbtn{
+  padding:5px 14px;border:1px solid #E2E8F0;border-radius:8px;
+  background:white;cursor:pointer;font-size:12px;font-weight:500;color:#374151;
+  transition:all .15s;
+}
+.tbtn:hover{background:#F0FDF4;border-color:#22C55E;color:#166534;}
+
+/* Legend */
+.legend{
+  position:fixed;bottom:16px;right:16px;
+  background:white;border:1px solid #E2E8F0;border-radius:12px;
+  padding:12px 16px;box-shadow:0 2px 12px rgba(0,0,0,.1);z-index:100;
+  min-width:200px;
+}
+.leg-title{font-size:11px;font-weight:700;color:#1E293B;margin-bottom:8px;letter-spacing:.5px;}
+.leg-item{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px;color:#374151;}
+.leg-line{width:28px;height:4px;border-radius:2px;}
+.leg-dashed{width:28px;height:0;border-top:3px dashed #999;}
+
+/* Info panel */
+.info{
+  position:fixed;bottom:16px;left:16px;
+  background:white;border:1px solid #E2E8F0;border-radius:12px;
+  padding:12px 16px;box-shadow:0 2px 12px rgba(0,0,0,.1);z-index:100;
+  max-width:280px;
+}
+.info-title{font-size:12px;font-weight:700;color:#1E293B;margin-bottom:4px;}
+.info-body{font-size:11px;color:#64748B;line-height:1.5;}
+
+/* Tooltip */
+#tooltip{
+  position:fixed;pointer-events:none;
+  background:rgba(15,23,42,.92);color:white;
+  padding:6px 12px;border-radius:6px;font-size:11px;
+  line-height:1.5;z-index:200;display:none;
+  max-width:240px;
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span>SCD-FE ⚡ Diagrama Electronico</span>
+  <button class="tbtn" onclick="zoom(1.2)">＋ Zoom</button>
+  <button class="tbtn" onclick="zoom(0.83)">－ Zoom</button>
+  <button class="tbtn" onclick="resetView()">⟳ Reset</button>
+  <button class="tbtn" onclick="toggleLabels()">🏷 Señales</button>
+</div>
+
+<div id="wrap">
+  <svg id="svg" xmlns="http://www.w3.org/2000/svg" width="2400" height="1320" style="position:absolute;top:0;left:0;">
+    <defs>
+      <!-- Grid pattern -->
+      <pattern id="smallgrid" width="20" height="20" patternUnits="userSpaceOnUse">
+        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#DDE3EE" stroke-width=".4"/>
+      </pattern>
+      <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+        <rect width="100" height="100" fill="url(#smallgrid)"/>
+        <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#C8D2E2" stroke-width=".8"/>
+      </pattern>
+      <!-- Arrowheads -->
+      <marker id="arr-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+        <path d="M 0 0 L 6 3 L 0 6 Z" fill="#DC2626"/>
+      </marker>
+      <marker id="arr-grn" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+        <path d="M 0 0 L 6 3 L 0 6 Z" fill="#16A34A"/>
+      </marker>
+      <marker id="arr-yel" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+        <path d="M 0 0 L 6 3 L 0 6 Z" fill="#CA8A04"/>
+      </marker>
+      <marker id="arr-pur" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+        <path d="M 0 0 L 6 3 L 0 6 Z" fill="#9333EA"/>
+      </marker>
+      <marker id="arr-blu" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+        <path d="M 0 0 L 6 3 L 0 6 Z" fill="#2563EB"/>
+      </marker>
+      <marker id="arr-org" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+        <path d="M 0 0 L 6 3 L 0 6 Z" fill="#EA580C"/>
+      </marker>
+    </defs>
+
+    <!-- BACKGROUND -->
+    <rect width="2400" height="1320" fill="#F1F5FB"/>
+    <rect width="2400" height="1320" fill="url(#grid)"/>
+
+    <!-- Section labels (background areas) -->
+    <!-- Optical section top -->
+    <rect x="20" y="20" width="2340" height="260" rx="12" fill="rgba(219,234,254,.35)" stroke="#BFDBFE" stroke-width="1" stroke-dasharray="8,4"/>
+    <text x="38" y="44" font-family="Arial" font-size="11" font-weight="bold" fill="#1D4ED8" letter-spacing="2">SECCION OPTICA</text>
+
+    <!-- Control section -->
+    <rect x="20" y="295" width="2340" height="260" rx="12" fill="rgba(220,252,231,.35)" stroke="#BBF7D0" stroke-width="1" stroke-dasharray="8,4"/>
+    <text x="38" y="315" font-family="Arial" font-size="11" font-weight="bold" fill="#166534" letter-spacing="2">SECCION DE CONTROL</text>
+
+    <!-- Safety section -->
+    <rect x="20" y="570" width="2340" height="210" rx="12" fill="rgba(254,226,226,.35)" stroke="#FECACA" stroke-width="1" stroke-dasharray="8,4"/>
+    <text x="38" y="590" font-family="Arial" font-size="11" font-weight="bold" fill="#991B1B" letter-spacing="2">SECCION DE SEGURIDAD</text>
+
+    <!-- Power section -->
+    <rect x="20" y="795" width="2340" height="200" rx="12" fill="rgba(254,243,199,.45)" stroke="#FDE68A" stroke-width="1" stroke-dasharray="8,4"/>
+    <text x="38" y="815" font-family="Arial" font-size="11" font-weight="bold" fill="#92400E" letter-spacing="2">ALIMENTACION</text>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         POWER BUSES (horizontal rails)
+    ═══════════════════════════════════════════════════════════ -->
+    <!-- +12V Bus -->
+    <line x1="60" y1="1040" x2="1900" y2="1040" stroke="#DC2626" stroke-width="4" stroke-dasharray="12,4"/>
+    <text x="70" y="1034" font-family="'Courier New',monospace" font-size="10" font-weight="bold" fill="#DC2626">+12V BUS</text>
+    <!-- GND Bus -->
+    <line x1="60" y1="1065" x2="1900" y2="1065" stroke="#1F2937" stroke-width="4" stroke-dasharray="12,4"/>
+    <text x="70" y="1059" font-family="'Courier New',monospace" font-size="10" font-weight="bold" fill="#1F2937">GND BUS</text>
+    <!-- +5V Bus -->
+    <line x1="60" y1="1090" x2="900" y2="1090" stroke="#EF4444" stroke-width="2.5" stroke-dasharray="6,3"/>
+    <text x="70" y="1084" font-family="'Courier New',monospace" font-size="10" font-weight="bold" fill="#B91C1C">+5V BUS</text>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         COMPONENTS
+    ═══════════════════════════════════════════════════════════ -->
+
+    <!-- ─── 12V PSU ─────────────────────────────────────────────── -->
+    <g id="psu" class="comp" data-tip="Fuente 12V 3A&#10;Alimenta todo el sistema&#10;Conectar a toma de 127V/220V">
+      <!-- cuerpo -->
+      <rect x="40" y="840" width="140" height="85" rx="8" fill="#1C1C2E" stroke="#4B5563" stroke-width="2"/>
+      <!-- franja LED -->
+      <rect x="40" y="840" width="140" height="8" rx="4" fill="#374151"/>
+      <!-- etiqueta voltaje -->
+      <rect x="58" y="860" width="60" height="28" rx="4" fill="#111827"/>
+      <text x="88" y="870" font-family="'Courier New',monospace" font-size="10" font-weight="bold" fill="#F59E0B" text-anchor="middle">12V DC</text>
+      <text x="88" y="882" font-family="'Courier New',monospace" font-size="9" fill="#9CA3AF" text-anchor="middle">3.0 A</text>
+      <!-- LED power -->
+      <circle cx="152" cy="864" r="5" fill="#22C55E" stroke="#166534" stroke-width="1"/>
+      <!-- terminal AC -->
+      <rect x="40" y="903" width="20" height="16" rx="2" fill="#374151"/>
+      <rect x="44" y="907" width="4" height="8" rx="1" fill="#D1D5DB"/>
+      <rect x="50" y="907" width="4" height="8" rx="1" fill="#D1D5DB"/>
+      <!-- terminal DC -->
+      <rect x="162" y="870" width="18" height="20" rx="2" fill="#374151"/>
+      <circle cx="165" cy="878" r="2" fill="#DC2626"/>
+      <circle cx="176" cy="878" r="2" fill="#1F2937"/>
+      <!-- label -->
+      <text x="110" y="936" font-family="Arial" font-size="11" font-weight="bold" fill="#1E293B" text-anchor="middle">FUENTE 12V 3A</text>
+      <text x="110" y="949" font-family="Arial" font-size="9" fill="#64748B" text-anchor="middle">Adaptador externo</text>
+    </g>
+
+    <!-- ─── BUCK CONVERTER ─────────────────────────────────────── -->
+    <g id="buck" class="comp" data-tip="Convertidor Buck 12V→5V&#10;Alimenta RPi Zero + Arduino&#10;Salida: 5V @ 2A continuo">
+      <rect x="250" y="845" width="140" height="75" rx="6" fill="#0F172A" stroke="#4B5563" stroke-width="1.5"/>
+      <!-- PCB green base -->
+      <rect x="256" y="851" width="128" height="63" rx="4" fill="#064E3B"/>
+      <!-- Inductor (bobina) -->
+      <ellipse cx="300" cy="880" rx="18" ry="10" fill="none" stroke="#A78BFA" stroke-width="2"/>
+      <ellipse cx="300" cy="880" rx="12" ry="6" fill="none" stroke="#A78BFA" stroke-width="1.5"/>
+      <!-- IC LM2596 -->
+      <rect x="330" y="867" width="32" height="24" rx="2" fill="#1E3A5F" stroke="#60A5FA" stroke-width="1"/>
+      <text x="346" y="877" font-family="'Courier New',monospace" font-size="7" fill="#93C5FD" text-anchor="middle">LM</text>
+      <text x="346" y="887" font-family="'Courier New',monospace" font-size="7" fill="#93C5FD" text-anchor="middle">2596</text>
+      <!-- Capacitor -->
+      <rect x="368" y="869" width="10" height="20" rx="2" fill="#B45309"/>
+      <text x="373" y="882" font-family="Arial" font-size="8" fill="#FEF3C7" text-anchor="middle">C</text>
+      <!-- Pins top (IN) -->
+      <rect x="264" y="842" width="6" height="8" rx="1" fill="#DC2626"/>
+      <rect x="275" y="842" width="6" height="8" rx="1" fill="#1F2937"/>
+      <!-- Pins bottom (OUT) -->
+      <rect x="264" y="921" width="6" height="8" rx="1" fill="#EF4444"/>
+      <rect x="275" y="921" width="6" height="8" rx="1" fill="#1F2937"/>
+      <!-- Labels IN/OUT -->
+      <text x="267" y="840" font-family="Arial" font-size="8" fill="#DC2626" text-anchor="middle">IN</text>
+      <text x="278" y="840" font-family="Arial" font-size="8" fill="#1F2937" text-anchor="middle">GND</text>
+      <text x="267" y="938" font-family="Arial" font-size="8" fill="#EF4444" text-anchor="middle">5V</text>
+      <text x="278" y="938" font-family="Arial" font-size="8" fill="#1F2937" text-anchor="middle">GND</text>
+      <text x="320" y="936" font-family="Arial" font-size="11" font-weight="bold" fill="#1E293B" text-anchor="middle">BUCK 12V→5V</text>
+      <text x="320" y="948" font-family="Arial" font-size="9" fill="#64748B" text-anchor="middle">LM2596 @ 2A</text>
+    </g>
+
+    <!-- ─── RASPBERRY PI ZERO 2W ──────────────────────────────── -->
+    <g id="rpi" class="comp" data-tip="Raspberry Pi Zero 2W&#10;Cerebro del sistema&#10;Corre Python + OpenCV&#10;Detecta mosquitos en tiempo real">
+      <!-- PCB -->
+      <rect x="175" y="330" width="185" height="110" rx="6" fill="#15803D" stroke="#166534" stroke-width="2"/>
+      <!-- Mounting holes -->
+      <circle cx="190" cy="345" r="4" fill="none" stroke="#14532D" stroke-width="2"/>
+      <circle cx="350" cy="345" r="4" fill="none" stroke="#14532D" stroke-width="2"/>
+      <circle cx="190" cy="425" r="4" fill="none" stroke="#14532D" stroke-width="2"/>
+      <circle cx="350" cy="425" r="4" fill="none" stroke="#14532D" stroke-width="2"/>
+      <!-- CPU chip -->
+      <rect x="230" y="355" width="55" height="55" rx="3" fill="#1C1917" stroke="#57534E" stroke-width="1"/>
+      <text x="257" y="376" font-family="'Courier New',monospace" font-size="7" fill="#A8A29E" text-anchor="middle">RP2040</text>
+      <text x="257" y="387" font-family="'Courier New',monospace" font-size="7" fill="#A8A29E" text-anchor="middle">Quad-core</text>
+      <text x="257" y="398" font-family="'Courier New',monospace" font-size="7" fill="#A8A29E" text-anchor="middle">512MB</text>
+      <!-- Procesador puntitos (ball grid) -->
+      <g fill="#374151">
+        <circle cx="234" cy="357" r="1.5"/><circle cx="240" cy="357" r="1.5"/><circle cx="246" cy="357" r="1.5"/>
+        <circle cx="234" cy="363" r="1.5"/><circle cx="240" cy="363" r="1.5"/><circle cx="246" cy="363" r="1.5"/>
+      </g>
+      <!-- Memoria RAM -->
+      <rect x="302" y="360" width="38" height="22" rx="2" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1"/>
+      <text x="321" y="370" font-family="'Courier New',monospace" font-size="6.5" fill="#93C5FD" text-anchor="middle">512MB</text>
+      <text x="321" y="379" font-family="'Courier New',monospace" font-size="6.5" fill="#93C5FD" text-anchor="middle">LPDDR2</text>
+      <!-- WiFi chip -->
+      <rect x="302" y="390" width="32" height="20" rx="2" fill="#0C4A6E" stroke="#0EA5E9" stroke-width="1"/>
+      <text x="318" y="403" font-family="'Courier New',monospace" font-size="6" fill="#BAE6FD" text-anchor="middle">WiFi/BT</text>
+      <!-- CSI connector (top) -->
+      <rect x="217" y="327" width="50" height="6" rx="1" fill="#B45309"/>
+      <text x="242" y="323" font-family="Arial" font-size="8" font-weight="bold" fill="#B45309" text-anchor="middle">CSI-2</text>
+      <!-- GPIO header (right side, 40 pins) -->
+      <g fill="#F59E0B">
+        <rect x="361" y="335" width="4" height="94" rx="1" fill="#D97706" stroke="#92400E" stroke-width=".5"/>
+        <!-- pin dots -->
+        <circle cx="363" cy="342" r="2.5"/><circle cx="363" cy="350" r="2.5"/>
+        <circle cx="363" cy="358" r="2.5"/><circle cx="363" cy="366" r="2.5"/>
+        <circle cx="363" cy="374" r="2.5"/><circle cx="363" cy="382" r="2.5"/>
+        <circle cx="363" cy="390" r="2.5"/><circle cx="363" cy="398" r="2.5"/>
+        <circle cx="363" cy="406" r="2.5"/><circle cx="363" cy="414" r="2.5"/>
+      </g>
+      <!-- USB micro -->
+      <rect x="175" y="370" width="8" height="14" rx="2" fill="#374151"/>
+      <!-- MicroSD slot -->
+      <rect x="175" y="400" width="10" height="8" rx="1" fill="#9CA3AF"/>
+      <text x="172" y="395" font-family="Arial" font-size="7" fill="#9CA3AF">SD</text>
+      <!-- LED verde -->
+      <circle cx="340" cy="420" r="4" fill="#4ADE80" stroke="#16A34A" stroke-width="1"/>
+      <!-- Labels -->
+      <text x="267" y="450" font-family="Arial" font-size="12" font-weight="bold" fill="white" text-anchor="middle">Raspberry Pi Zero 2W</text>
+      <text x="267" y="462" font-family="Arial" font-size="9" fill="#BBF7D0" text-anchor="middle">Python / OpenCV — deteccion en tiempo real</text>
+    </g>
+
+    <!-- ─── CAMARA NoIR ────────────────────────────────────────── -->
+    <g id="cam" class="comp" data-tip="Camara NoIR 5MP&#10;Ve en infrarrojo (850nm)&#10;Detecta silueta del mosquito&#10;Conecta por cable CSI-2">
+      <!-- PCB module -->
+      <rect x="195" y="70" width="110" height="100" rx="5" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1.5"/>
+      <!-- Lens barrel -->
+      <circle cx="250" cy="115" r="32" fill="#0F172A" stroke="#334155" stroke-width="2"/>
+      <circle cx="250" cy="115" r="25" fill="#020617" stroke="#1E40AF" stroke-width="2"/>
+      <circle cx="250" cy="115" r="16" fill="#0C0C0C" stroke="#3B82F6" stroke-width="1.5"/>
+      <circle cx="250" cy="115" r="8" fill="#162032" stroke="#60A5FA" stroke-width="1"/>
+      <!-- Reflection dots -->
+      <circle cx="243" cy="108" r="2.5" fill="#DBEAFE" opacity=".5"/>
+      <circle cx="255" cy="120" r="1.5" fill="#BFDBFE" opacity=".4"/>
+      <!-- IR filter notation -->
+      <text x="250" y="114" font-family="Arial" font-size="7" fill="#6EE7B7" text-anchor="middle">IR</text>
+      <!-- CSI connector bottom -->
+      <rect x="227" y="167" width="46" height="5" rx="1" fill="#B45309"/>
+      <!-- Ribbon cable going down -->
+      <rect x="231" y="172" width="38" height="22" rx="1" fill="#FEF9C3" stroke="#CA8A04" stroke-width=".5" opacity=".8"/>
+      <line x1="235" y1="172" x2="235" y2="194" stroke="#CA8A04" stroke-width=".5"/>
+      <line x1="241" y1="172" x2="241" y2="194" stroke="#CA8A04" stroke-width=".5"/>
+      <line x1="247" y1="172" x2="247" y2="194" stroke="#CA8A04" stroke-width=".5"/>
+      <line x1="253" y1="172" x2="253" y2="194" stroke="#CA8A04" stroke-width=".5"/>
+      <line x1="259" y1="172" x2="259" y2="194" stroke="#CA8A04" stroke-width=".5"/>
+      <!-- Label -->
+      <text x="250" y="63" font-family="Arial" font-size="11" font-weight="bold" fill="#1E293B" text-anchor="middle">Camara NoIR 5MP</text>
+      <text x="250" y="55" font-family="Arial" font-size="9" fill="#64748B" text-anchor="middle">OV5647 — FOV 50°</text>
+    </g>
+
+    <!-- ─── ARDUINO NANO ─────────────────────────────────────── -->
+    <g id="ard" class="comp" data-tip="Arduino Nano&#10;Controlador tiempo real&#10;Mueve galvos via DAC SPI&#10;Dispara laser TTL&#10;Watchdog + seguridad">
+      <!-- PCB azul -->
+      <rect x="620" y="340" width="175" height="80" rx="5" fill="#1D4ED8" stroke="#1E40AF" stroke-width="2"/>
+      <!-- Chip ATmega328 -->
+      <rect x="670" y="355" width="50" height="45" rx="2" fill="#0F172A" stroke="#475569" stroke-width="1"/>
+      <text x="695" y="370" font-family="'Courier New',monospace" font-size="7" fill="#94A3B8" text-anchor="middle">ATmega</text>
+      <text x="695" y="380" font-family="'Courier New',monospace" font-size="7" fill="#94A3B8" text-anchor="middle">328P</text>
+      <text x="695" y="390" font-family="'Courier New',monospace" font-size="7" fill="#94A3B8" text-anchor="middle">16MHz</text>
+      <!-- Cristal -->
+      <rect x="730" y="362" width="18" height="10" rx="2" fill="#A16207" stroke="#CA8A04" stroke-width="1"/>
+      <text x="739" y="369" font-family="Arial" font-size="6" fill="#FEF08A" text-anchor="middle">16M</text>
+      <!-- USB Mini -->
+      <rect x="620" y="354" width="10" height="16" rx="2" fill="#374151"/>
+      <rect x="622" y="356" width="6" height="12" fill="#111827"/>
+      <!-- Reset button -->
+      <circle cx="755" cy="365" r="6" fill="#EF4444" stroke="#DC2626" stroke-width="1.5"/>
+      <text x="755" y="368" font-family="Arial" font-size="5" fill="white" text-anchor="middle">RST</text>
+      <!-- Pins (top y bottom) -->
+      <g fill="#F59E0B">
+        <rect x="632" y="337" width="6" height="5" rx="1"/>
+        <rect x="643" y="337" width="6" height="5" rx="1"/>
+        <rect x="654" y="337" width="6" height="5" rx="1"/>
+        <rect x="665" y="337" width="6" height="5" rx="1"/>
+        <rect x="676" y="337" width="6" height="5" rx="1"/>
+        <rect x="687" y="337" width="6" height="5" rx="1"/>
+        <rect x="698" y="337" width="6" height="5" rx="1"/>
+        <rect x="709" y="337" width="6" height="5" rx="1"/>
+        <rect x="720" y="337" width="6" height="5" rx="1"/>
+        <!-- Bottom pins -->
+        <rect x="632" y="420" width="6" height="5" rx="1"/>
+        <rect x="643" y="420" width="6" height="5" rx="1"/>
+        <rect x="654" y="420" width="6" height="5" rx="1"/>
+        <rect x="665" y="420" width="6" height="5" rx="1"/>
+        <rect x="676" y="420" width="6" height="5" rx="1"/>
+        <rect x="687" y="420" width="6" height="5" rx="1"/>
+        <rect x="698" y="420" width="6" height="5" rx="1"/>
+        <rect x="709" y="420" width="6" height="5" rx="1"/>
+        <rect x="720" y="420" width="6" height="5" rx="1"/>
+      </g>
+      <!-- LED power -->
+      <circle cx="766" cy="395" r="4" fill="#22C55E" stroke="#16A34A" stroke-width="1"/>
+      <!-- LED RX/TX -->
+      <circle cx="756" cy="395" r="3" fill="#FBBF24"/>
+      <!-- labels -->
+      <text x="707" y="460" font-family="Arial" font-size="12" font-weight="bold" fill="#1E293B" text-anchor="middle">Arduino Nano</text>
+      <text x="707" y="473" font-family="Arial" font-size="9" fill="#64748B" text-anchor="middle">SPI · UART · GPIO — control tiempo real</text>
+    </g>
+
+    <!-- ─── DAC MCP4822 X ─────────────────────────────────────── -->
+    <g id="dacX" class="comp" data-tip="DAC MCP4822 — Canal X&#10;Digital a analogico 12-bit SPI&#10;Salida 0-4.096V → opamp → ±5V&#10;Controla Galvo X (horizontal)">
+      <!-- IC DIP package -->
+      <rect x="1010" y="300" width="90" height="55" rx="3" fill="#1C1C2E" stroke="#6B7280" stroke-width="1.5"/>
+      <!-- notch -->
+      <path d="M 1050 300 Q 1055 293 1060 300" fill="none" stroke="#9CA3AF" stroke-width="1.5"/>
+      <!-- IC texto -->
+      <text x="1055" y="320" font-family="'Courier New',monospace" font-size="8" font-weight="bold" fill="#D1D5DB" text-anchor="middle">MCP</text>
+      <text x="1055" y="330" font-family="'Courier New',monospace" font-size="8" fill="#D1D5DB" text-anchor="middle">4822</text>
+      <text x="1055" y="341" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF" text-anchor="middle">12-bit SPI</text>
+      <!-- Pins izquierda (4) -->
+      <g fill="#9CA3AF">
+        <rect x="1001" y="304" width="10" height="5" rx="1"/>
+        <text x="998" y="308" font-family="'Courier New',monospace" font-size="7" fill="#6B7280" text-anchor="end">CS</text>
+        <rect x="1001" y="314" width="10" height="5" rx="1"/>
+        <text x="998" y="318" font-family="'Courier New',monospace" font-size="7" fill="#6B7280" text-anchor="end">CLK</text>
+        <rect x="1001" y="324" width="10" height="5" rx="1"/>
+        <text x="998" y="328" font-family="'Courier New',monospace" font-size="7" fill="#6B7280" text-anchor="end">SDI</text>
+        <rect x="1001" y="334" width="10" height="5" rx="1"/>
+        <text x="998" y="338" font-family="'Courier New',monospace" font-size="7" fill="#6B7280" text-anchor="end">LDAC</text>
+      </g>
+      <!-- Pins derecha (4) -->
+      <g fill="#EA580C">
+        <rect x="1099" y="304" width="10" height="5" rx="1"/>
+        <text x="1113" y="308" font-family="'Courier New',monospace" font-size="7" fill="#EA580C">VoutA</text>
+        <rect x="1099" y="314" width="10" height="5" rx="1"/>
+        <text x="1113" y="318" font-family="'Courier New',monospace" font-size="7" fill="#EA580C">VoutB</text>
+        <rect x="1099" y="324" width="10" height="5" rx="1"/>
+        <text x="1113" y="328" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF">GND</text>
+        <rect x="1099" y="334" width="10" height="5" rx="1"/>
+        <text x="1113" y="338" font-family="'Courier New',monospace" font-size="7" fill="#EF4444">VDD</text>
+      </g>
+      <text x="1055" y="370" font-family="Arial" font-size="10" font-weight="bold" fill="#1E293B" text-anchor="middle">DAC X (Galvo X)</text>
+    </g>
+
+    <!-- ─── DAC MCP4822 Y ─────────────────────────────────────── -->
+    <g id="dacY" class="comp" data-tip="DAC MCP4822 — Canal Y&#10;Digital a analogico 12-bit SPI&#10;Salida 0-4.096V → opamp → ±5V&#10;Controla Galvo Y (vertical)">
+      <rect x="1220" y="300" width="90" height="55" rx="3" fill="#1C1C2E" stroke="#6B7280" stroke-width="1.5"/>
+      <path d="M 1260 300 Q 1265 293 1270 300" fill="none" stroke="#9CA3AF" stroke-width="1.5"/>
+      <text x="1265" y="320" font-family="'Courier New',monospace" font-size="8" font-weight="bold" fill="#D1D5DB" text-anchor="middle">MCP</text>
+      <text x="1265" y="330" font-family="'Courier New',monospace" font-size="8" fill="#D1D5DB" text-anchor="middle">4822</text>
+      <text x="1265" y="341" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF" text-anchor="middle">12-bit SPI</text>
+      <g fill="#9CA3AF">
+        <rect x="1211" y="304" width="10" height="5" rx="1"/>
+        <text x="1208" y="308" font-family="'Courier New',monospace" font-size="7" fill="#6B7280" text-anchor="end">CS</text>
+        <rect x="1211" y="314" width="10" height="5" rx="1"/>
+        <text x="1208" y="318" font-family="'Courier New',monospace" font-size="7" fill="#6B7280" text-anchor="end">CLK</text>
+        <rect x="1211" y="324" width="10" height="5" rx="1"/>
+        <text x="1208" y="328" font-family="'Courier New',monospace" font-size="7" fill="#6B7280" text-anchor="end">SDI</text>
+        <rect x="1211" y="334" width="10" height="5" rx="1"/>
+        <text x="1208" y="338" font-family="'Courier New',monospace" font-size="7" fill="#6B7280" text-anchor="end">LDAC</text>
+      </g>
+      <g fill="#EA580C">
+        <rect x="1309" y="304" width="10" height="5" rx="1"/>
+        <text x="1323" y="308" font-family="'Courier New',monospace" font-size="7" fill="#EA580C">VoutA</text>
+        <rect x="1309" y="314" width="10" height="5" rx="1"/>
+        <text x="1323" y="318" font-family="'Courier New',monospace" font-size="7" fill="#EA580C">VoutB</text>
+        <rect x="1309" y="324" width="10" height="5" rx="1"/>
+        <text x="1323" y="328" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF">GND</text>
+        <rect x="1309" y="334" width="10" height="5" rx="1"/>
+        <text x="1323" y="338" font-family="'Courier New',monospace" font-size="7" fill="#EF4444">VDD</text>
+      </g>
+      <text x="1265" y="370" font-family="Arial" font-size="10" font-weight="bold" fill="#1E293B" text-anchor="middle">DAC Y (Galvo Y)</text>
+    </g>
+
+    <!-- ─── GALVO X ─────────────────────────────────────────────── -->
+    <g id="galvoX" class="comp" data-tip="Galvanometro X&#10;Eje horizontal (izquierda-derecha)&#10;20,000 puntos/segundo&#10;Espejo 6x8mm primera superficie">
+      <!-- Motor body -->
+      <rect x="1050" y="70" width="85" height="80" rx="6" fill="#1C1C2E" stroke="#475569" stroke-width="2"/>
+      <!-- Bobina interior -->
+      <ellipse cx="1092" cy="108" rx="28" ry="22" fill="none" stroke="#A78BFA" stroke-width="2.5"/>
+      <ellipse cx="1092" cy="108" rx="20" ry="14" fill="none" stroke="#A78BFA" stroke-width="1.5"/>
+      <ellipse cx="1092" cy="108" rx="12" ry="8" fill="#0F172A"/>
+      <!-- Shaft (eje) -->
+      <rect x="1088" y="88" width="8" height="40" rx="2" fill="#6B7280"/>
+      <!-- Mirror -->
+      <rect x="1085" y="95" width="14" height="25" rx="1" fill="#DBEAFE" stroke="#93C5FD" stroke-width="1.5" transform="rotate(-15,1092,107)"/>
+      <!-- Reflection -->
+      <line x1="1092" y1="88" x2="1100" y2="75" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <!-- Pins -->
+      <rect x="1050" y="142" width="10" height="6" rx="1" fill="#EA580C"/>
+      <rect x="1064" y="142" width="10" height="6" rx="1" fill="#EA580C"/>
+      <rect x="1078" y="142" width="10" height="6" rx="1" fill="#1F2937"/>
+      <!-- label -->
+      <text x="1092" y="61" font-family="Arial" font-size="11" font-weight="bold" fill="#1E293B" text-anchor="middle">Galvo X</text>
+      <text x="1092" y="52" font-family="Arial" font-size="9" fill="#64748B" text-anchor="middle">Eje Horizontal</text>
+    </g>
+
+    <!-- ─── GALVO Y ─────────────────────────────────────────────── -->
+    <g id="galvoY" class="comp" data-tip="Galvanometro Y&#10;Eje vertical (arriba-abajo)&#10;20,000 puntos/segundo&#10;Sep. espejos: 18mm ±0.3mm CRITICO">
+      <rect x="1250" y="70" width="85" height="80" rx="6" fill="#1C1C2E" stroke="#475569" stroke-width="2"/>
+      <ellipse cx="1292" cy="108" rx="28" ry="22" fill="none" stroke="#A78BFA" stroke-width="2.5"/>
+      <ellipse cx="1292" cy="108" rx="20" ry="14" fill="none" stroke="#A78BFA" stroke-width="1.5"/>
+      <ellipse cx="1292" cy="108" rx="12" ry="8" fill="#0F172A"/>
+      <rect x="1288" y="88" width="8" height="40" rx="2" fill="#6B7280"/>
+      <rect x="1285" y="95" width="14" height="25" rx="1" fill="#DBEAFE" stroke="#93C5FD" stroke-width="1.5" transform="rotate(10,1292,107)"/>
+      <line x1="1292" y1="95" x2="1302" y2="80" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <rect x="1250" y="142" width="10" height="6" rx="1" fill="#EA580C"/>
+      <rect x="1264" y="142" width="10" height="6" rx="1" fill="#EA580C"/>
+      <rect x="1278" y="142" width="10" height="6" rx="1" fill="#1F2937"/>
+      <!-- Cota critica -->
+      <line x1="1135" y1="108" x2="1250" y2="108" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,2"/>
+      <text x="1192" y="104" font-family="Arial" font-size="9" font-weight="bold" fill="#DC2626" text-anchor="middle">18mm ±0.3mm</text>
+      <line x1="1135" y1="104" x2="1135" y2="112" stroke="#DC2626" stroke-width="1"/>
+      <line x1="1250" y1="104" x2="1250" y2="112" stroke="#DC2626" stroke-width="1"/>
+      <text x="1292" y="61" font-family="Arial" font-size="11" font-weight="bold" fill="#1E293B" text-anchor="middle">Galvo Y</text>
+      <text x="1292" y="52" font-family="Arial" font-size="9" fill="#64748B" text-anchor="middle">Eje Vertical</text>
+    </g>
+
+    <!-- ─── LASER 450nm ─────────────────────────────────────────── -->
+    <g id="laser" class="comp" data-tip="Laser 450nm 500mW&#10;⚠ CLASE 3B — peligro ocular&#10;Control TTL 12V&#10;Pulso maximo: 15ms (HW limit)">
+      <!-- Cuerpo cilindrico (vista lateral) -->
+      <rect x="1380" y="78" width="130" height="45" rx="22" fill="#1E1B4B" stroke="#4338CA" stroke-width="2"/>
+      <!-- Aletas de disipacion -->
+      <line x1="1400" y1="78" x2="1400" y2="123" stroke="#312E81" stroke-width="3"/>
+      <line x1="1415" y1="78" x2="1415" y2="123" stroke="#312E81" stroke-width="3"/>
+      <line x1="1430" y1="78" x2="1430" y2="123" stroke="#312E81" stroke-width="3"/>
+      <line x1="1445" y1="78" x2="1445" y2="123" stroke="#312E81" stroke-width="3"/>
+      <line x1="1460" y1="78" x2="1460" y2="123" stroke="#312E81" stroke-width="3"/>
+      <!-- Apertura del laser (frente) -->
+      <circle cx="1500" cy="100" r="16" fill="#0F0F1E" stroke="#3B82F6" stroke-width="2"/>
+      <circle cx="1500" cy="100" r="10" fill="#030712" stroke="#60A5FA" stroke-width="1.5"/>
+      <circle cx="1500" cy="100" r="5" fill="#2563EB"/>
+      <circle cx="1500" cy="100" r="2" fill="#BFDBFE"/>
+      <!-- Haz laser (saliendo hacia la derecha) -->
+      <polygon points="1516,96 1560,85 1560,115 1516,104" fill="#3B82F6" opacity=".25"/>
+      <line x1="1516" y1="100" x2="1565" y2="100" stroke="#2563EB" stroke-width="3" stroke-dasharray="4,3" marker-end="url(#arr-blu)"/>
+      <!-- Cable TTL/Power -->
+      <rect x="1380" y="100" width="8" height="14" rx="2" fill="#374151"/>
+      <!-- Advertencia clase 3B -->
+      <rect x="1385" y="125" width="125" height="16" rx="3" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1"/>
+      <text x="1447" y="136" font-family="Arial" font-size="8.5" font-weight="bold" fill="#DC2626" text-anchor="middle">⚠ CLASE 3B — Gafas OD4+ obligatorias</text>
+      <!-- Label -->
+      <text x="1447" y="63" font-family="Arial" font-size="12" font-weight="bold" fill="#1E293B" text-anchor="middle">Laser 450nm — 500mW TTL</text>
+      <!-- Haz azul visible -->
+      <text x="1575" y="103" font-family="Arial" font-size="10" fill="#2563EB">→ haz azul</text>
+    </g>
+
+    <!-- ─── RADAR HLK-LD2410 ──────────────────────────────────── -->
+    <g id="radar" class="comp" data-tip="Radar HLK-LD2410 24GHz&#10;CAPA 1 de seguridad&#10;Detecta personas y mascotas&#10;Corta laser por HARDWARE directo">
+      <rect x="468" y="585" width="125" height="90" rx="6" fill="#1A1A2E" stroke="#7C3AED" stroke-width="1.5"/>
+      <!-- Antenas (grid mmWave) -->
+      <g fill="#7C3AED" opacity=".8">
+        <rect x="480" y="597" width="18" height="12" rx="2"/>
+        <rect x="504" y="597" width="18" height="12" rx="2"/>
+        <rect x="528" y="597" width="18" height="12" rx="2"/>
+        <rect x="480" y="615" width="18" height="12" rx="2"/>
+        <rect x="504" y="615" width="18" height="12" rx="2"/>
+        <rect x="528" y="615" width="18" height="12" rx="2"/>
+      </g>
+      <!-- Ondas mmWave -->
+      <path d="M 560 630 Q 575 615 560 600" fill="none" stroke="#A78BFA" stroke-width="1.5"/>
+      <path d="M 565 635 Q 585 615 565 595" fill="none" stroke="#A78BFA" stroke-width="1" opacity=".6"/>
+      <path d="M 570 640 Q 595 615 570 590" fill="none" stroke="#A78BFA" stroke-width=".8" opacity=".4"/>
+      <!-- LED -->
+      <circle cx="556" cy="638" r="5" fill="#F97316" stroke="#C2410C" stroke-width="1"/>
+      <!-- Pins -->
+      <rect x="468" y="667" width="8" height="10" rx="1" fill="#9CA3AF"/>
+      <rect x="480" y="667" width="8" height="10" rx="1" fill="#9CA3AF"/>
+      <rect x="492" y="667" width="8" height="10" rx="1" fill="#9CA3AF"/>
+      <text x="472" y="682" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF">VCC</text>
+      <text x="484" y="682" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF">GND</text>
+      <text x="496" y="682" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF">TX</text>
+      <!-- Label -->
+      <text x="530" y="695" font-family="Arial" font-size="11" font-weight="bold" fill="#1E293B" text-anchor="middle">Radar HLK-LD2410</text>
+      <text x="530" y="706" font-family="Arial" font-size="9" fill="#7C3AED" text-anchor="middle">24GHz mmWave — Alcance 5m</text>
+    </g>
+
+    <!-- ─── RELAY FAIL-SAFE ──────────────────────────────────── -->
+    <g id="relay" class="comp" data-tip="Relay 5V NC (Normalmente Cerrado)&#10;CAPA 3 de seguridad&#10;Estado por defecto: laser APAGADO&#10;Corte fisico: 12V @ 3A">
+      <!-- Caja del relay -->
+      <rect x="680" y="575" width="130" height="90" rx="5" fill="#1C1917" stroke="#DC2626" stroke-width="2"/>
+      <!-- Bobina (coil) symbol -->
+      <rect x="695" y="590" width="50" height="30" rx="3" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1.5"/>
+      <path d="M 700 605 Q 705 598 710 605 Q 715 612 720 605 Q 725 598 730 605 Q 735 612 740 605" fill="none" stroke="#60A5FA" stroke-width="2"/>
+      <text x="720" y="630" font-family="Arial" font-size="8" fill="#60A5FA" text-anchor="middle">COIL 5V</text>
+      <!-- Contactos del relay (switch) -->
+      <rect x="760" y="592" width="36" height="26" rx="3" fill="#1F2937" stroke="#4B5563" stroke-width="1"/>
+      <!-- Switch symbol -->
+      <circle cx="766" cy="598" r="2.5" fill="#9CA3AF"/>
+      <circle cx="766" cy="610" r="2.5" fill="#9CA3AF"/>
+      <circle cx="790" cy="604" r="2.5" fill="#9CA3AF"/>
+      <line x1="766" y1="598" x2="788" y2="605" stroke="#DC2626" stroke-width="1.5"/>
+      <!-- NC label -->
+      <text x="778" y="628" font-family="Arial" font-size="7" font-weight="bold" fill="#DC2626" text-anchor="middle">NC</text>
+      <!-- Transistor Q1 -->
+      <text x="700" y="652" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF">CTRL→ GPIO</text>
+      <!-- LED indicador -->
+      <circle cx="800" cy="640" r="5" fill="#EF4444" stroke="#DC2626" stroke-width="1"/>
+      <!-- Pins arriba -->
+      <rect x="695" y="572" width="8" height="6" rx="1" fill="#3B82F6"/>
+      <rect x="707" y="572" width="8" height="6" rx="1" fill="#1F2937"/>
+      <text x="699" y="570" font-family="'Courier New',monospace" font-size="7" fill="#3B82F6">+</text>
+      <text x="711" y="570" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF">GND</text>
+      <!-- Pins contacto -->
+      <rect x="760" y="572" width="8" height="6" rx="1" fill="#DC2626"/>
+      <rect x="780" y="572" width="8" height="6" rx="1" fill="#DC2626"/>
+      <text x="764" y="570" font-family="'Courier New',monospace" font-size="7" fill="#DC2626">COM</text>
+      <text x="784" y="570" font-family="'Courier New',monospace" font-size="7" fill="#DC2626">NC</text>
+      <!-- Label -->
+      <text x="745" y="682" font-family="Arial" font-size="11" font-weight="bold" fill="#1E293B" text-anchor="middle">Relay 5V NC — Fail-Safe</text>
+      <text x="745" y="693" font-family="Arial" font-size="9" fill="#DC2626" text-anchor="middle">NC = laser apagado por defecto</text>
+    </g>
+
+    <!-- ─── LASER DRIVER ─────────────────────────────────────── -->
+    <g id="driver" class="comp" data-tip="Driver Laser TTL&#10;Regula corriente del laser&#10;Control: señal TTL del Arduino&#10;Potencia: 12V via relay">
+      <rect x="870" y="575" width="130" height="85" rx="5" fill="#0F172A" stroke="#F59E0B" stroke-width="1.5"/>
+      <!-- Potenciómetro -->
+      <circle cx="920" cy="610" r="16" fill="#1E293B" stroke="#F59E0B" stroke-width="2"/>
+      <circle cx="920" cy="610" r="8" fill="#334155"/>
+      <line x1="920" y1="594" x2="916" y2="598" stroke="#F59E0B" stroke-width="2"/>
+      <text x="920" y="614" font-family="Arial" font-size="8" fill="#FEF08A" text-anchor="middle">ADJ</text>
+      <!-- Mosfet -->
+      <rect x="948" y="594" width="30" height="32" rx="2" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1"/>
+      <text x="963" y="608" font-family="'Courier New',monospace" font-size="6.5" fill="#93C5FD" text-anchor="middle">MOSFET</text>
+      <text x="963" y="618" font-family="'Courier New',monospace" font-size="6.5" fill="#93C5FD" text-anchor="middle">IRF540</text>
+      <!-- Terminales -->
+      <rect x="870" y="575" width="8" height="8" rx="1" fill="#DC2626"/>
+      <rect x="882" y="575" width="8" height="8" rx="1" fill="#1F2937"/>
+      <text x="874" y="573" font-family="'Courier New',monospace" font-size="7" fill="#DC2626">12V</text>
+      <text x="886" y="573" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF">GND</text>
+      <!-- TTL input -->
+      <rect x="870" y="618" width="8" height="8" rx="1" fill="#9333EA"/>
+      <text x="866" y="616" font-family="'Courier New',monospace" font-size="7" fill="#9333EA" text-anchor="end">TTL</text>
+      <!-- Output -->
+      <rect x="998" y="604" width="8" height="8" rx="1" fill="#2563EB"/>
+      <rect x="998" y="616" width="8" height="8" rx="1" fill="#1F2937"/>
+      <text x="1010" y="610" font-family="'Courier New',monospace" font-size="7" fill="#2563EB">L+</text>
+      <text x="1010" y="622" font-family="'Courier New',monospace" font-size="7" fill="#9CA3AF">L-</text>
+      <!-- Label -->
+      <text x="935" y="680" font-family="Arial" font-size="11" font-weight="bold" fill="#1E293B" text-anchor="middle">Driver Laser TTL</text>
+      <text x="935" y="692" font-family="Arial" font-size="9" fill="#64748B" text-anchor="middle">Regulacion de corriente</text>
+    </g>
+
+    <!-- ─── LEDs IR ─────────────────────────────────────────────── -->
+    <g id="leds" class="comp" data-tip="10x LEDs IR 850nm&#10;Iluminan el retroreflector&#10;Luz invisible para humanos&#10;Espaciado: 60mm entre LEDs">
+      <!-- Soporte vertical (canaleta) -->
+      <rect x="48" y="330" width="30" height="130" rx="4" fill="#D1FAE5" stroke="#6EE7B7" stroke-width="1.5"/>
+      <!-- 5 LEDs representativos -->
+      <g>
+        <!-- LED 1 -->
+        <polygon points="63,345 73,355 53,355" fill="#FF6633" stroke="#C2410C" stroke-width="1"/>
+        <line x1="63" y1="355" x2="63" y2="362" stroke="#C2410C" stroke-width="1.5"/>
+        <line x1="53" y1="358" x2="73" y2="358" stroke="#C2410C" stroke-width="1.5"/>
+        <!-- Halo IR -->
+        <circle cx="63" cy="350" r="12" fill="none" stroke="#FF9900" stroke-width=".8" stroke-dasharray="3,2" opacity=".5"/>
+        <!-- LED 2 -->
+        <polygon points="63,372 73,382 53,382" fill="#FF6633" stroke="#C2410C" stroke-width="1"/>
+        <line x1="63" y1="382" x2="63" y2="389" stroke="#C2410C" stroke-width="1.5"/>
+        <line x1="53" y1="385" x2="73" y2="385" stroke="#C2410C" stroke-width="1.5"/>
+        <!-- LED 3 -->
+        <polygon points="63,399 73,409 53,409" fill="#FF6633" stroke="#C2410C" stroke-width="1"/>
+        <line x1="63" y1="409" x2="63" y2="416" stroke="#C2410C" stroke-width="1.5"/>
+        <line x1="53" y1="412" x2="73" y2="412" stroke="#C2410C" stroke-width="1.5"/>
+        <!-- LED 4 -->
+        <polygon points="63,426 73,436 53,436" fill="#FF6633" stroke="#C2410C" stroke-width="1"/>
+        <line x1="63" y1="436" x2="63" y2="443" stroke="#C2410C" stroke-width="1.5"/>
+        <line x1="53" y1="439" x2="73" y2="439" stroke="#C2410C" stroke-width="1.5"/>
+        <!-- LED 5 -->
+        <polygon points="63,453 73,463 53,463" fill="#FF6633" stroke="#C2410C" stroke-width="1"/>
+        <line x1="63" y1="463" x2="63" y2="470" stroke="#C2410C" stroke-width="1.5"/>
+        <line x1="53" y1="466" x2="73" y2="466" stroke="#C2410C" stroke-width="1.5"/>
+      </g>
+      <!-- Haces IR horizontales -->
+      <line x1="78" y1="350" x2="120" y2="350" stroke="#FF9900" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>
+      <line x1="78" y1="377" x2="120" y2="377" stroke="#FF9900" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>
+      <line x1="78" y1="404" x2="120" y2="404" stroke="#FF9900" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>
+      <line x1="78" y1="431" x2="120" y2="431" stroke="#FF9900" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>
+      <line x1="78" y1="458" x2="120" y2="458" stroke="#FF9900" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>
+      <text x="63" y="323" font-family="Arial" font-size="10" font-weight="bold" fill="#1E293B" text-anchor="middle">LEDs IR</text>
+      <text x="63" y="314" font-family="Arial" font-size="8" fill="#64748B" text-anchor="middle">850nm x10</text>
+      <text x="63" y="475" font-family="Arial" font-size="8" fill="#64748B" text-anchor="middle">60mm sep.</text>
+    </g>
+
+    <!-- ─── RETROREFLECTOR (indicado, en el marco) ─────────────── -->
+    <g id="retro">
+      <rect x="1820" y="50" width="30" height="1150" rx="3" fill="#FDE68A" stroke="#D97706" stroke-width="1.5"/>
+      <!-- Patron retroreflectante -->
+      <g opacity=".6">
+        <circle cx="1835" cy="100" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="150" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="200" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="250" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="300" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="350" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="400" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="500" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="600" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="700" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="800" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="900" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="1000" r="4" fill="#F59E0B"/>
+        <circle cx="1835" cy="1100" r="4" fill="#F59E0B"/>
+      </g>
+      <text x="1835" y="40" font-family="Arial" font-size="10" font-weight="bold" fill="#92400E" text-anchor="middle" transform="rotate(-90,1835,600)" y="1855">RETROREFLECTOR 3M — 3 lados del marco</text>
+    </g>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         CABLES / CONEXIONES
+    ═══════════════════════════════════════════════════════════ -->
+    <g id="wires">
+
+      <!-- ── CSI: Camera → RPi (blanco, ribbon cable) ─────────── -->
+      <path d="M 250 194 L 250 240 L 267 240 L 267 330" stroke="#D97706" stroke-width="3" fill="none" stroke-dasharray="none"/>
+      <text x="257" y="265" font-family="Arial" font-size="9" font-weight="bold" fill="#92400E" transform="rotate(-90,257,265)">CSI-2 (15 pines)</text>
+
+      <!-- ── UART RPi → Arduino TX ──────────────────────────── -->
+      <path d="M 362 370 L 500 370 L 500 362 L 620 362" stroke="#CA8A04" stroke-width="2.5" fill="none" marker-end="url(#arr-yel)"/>
+      <rect x="450" y="356" width="50" height="14" rx="3" fill="white" stroke="#CA8A04" stroke-width="1"/>
+      <text x="475" y="366" font-family="Arial" font-size="8" fill="#92400E" text-anchor="middle" font-weight="bold">UART TX</text>
+
+      <!-- ── UART Arduino → RPi RX ──────────────────────────── -->
+      <path d="M 620 375 L 500 375 L 500 385 L 362 385" stroke="#CA8A04" stroke-width="2.5" fill="none" marker-end="url(#arr-yel)" stroke-dasharray="6,3"/>
+      <rect x="450" y="375" width="50" height="14" rx="3" fill="white" stroke="#CA8A04" stroke-width="1"/>
+      <text x="475" y="385" font-family="Arial" font-size="8" fill="#92400E" text-anchor="middle" font-weight="bold">UART RX</text>
+
+      <!-- ── WATCHDOG: RPi → Arduino ───────────────────────── -->
+      <path d="M 362 408 L 530 408 L 530 400 L 620 400" stroke="#DC2626" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arr-red)"/>
+      <rect x="456" y="398" width="60" height="14" rx="3" fill="white" stroke="#DC2626" stroke-width="1"/>
+      <text x="486" y="408" font-family="Arial" font-size="8" fill="#DC2626" text-anchor="middle" font-weight="bold">WDG signal</text>
+
+      <!-- ── SPI bus: Arduino → DAC X (4 lineas) ──────────── -->
+      <!-- MOSI -->
+      <path d="M 795 345 L 900 345 L 900 318 L 1010 318" stroke="#16A34A" stroke-width="2" fill="none" marker-end="url(#arr-grn)"/>
+      <!-- CLK -->
+      <path d="M 795 350 L 905 350 L 905 323 L 1010 323" stroke="#16A34A" stroke-width="2" fill="none"/>
+      <!-- CS1 -->
+      <path d="M 795 355 L 910 355 L 910 328 L 1010 328" stroke="#16A34A" stroke-width="2" fill="none"/>
+      <!-- CS2 to DAC Y -->
+      <path d="M 795 360 L 915 360 L 915 323 L 1220 323" stroke="#16A34A" stroke-width="1.5" fill="none" stroke-dasharray="6,2"/>
+      <rect x="860" y="330" width="65" height="14" rx="3" fill="white" stroke="#16A34A" stroke-width="1"/>
+      <text x="892" y="340" font-family="Arial" font-size="8" fill="#15803D" text-anchor="middle" font-weight="bold">SPI bus (4w)</text>
+
+      <!-- SPI shared to DAC Y -->
+      <rect x="1050" y="315" width="60" height="14" rx="3" fill="white" stroke="#16A34A" stroke-width="1"/>
+      <text x="1080" y="325" font-family="Arial" font-size="8" fill="#15803D" text-anchor="middle">SPI→DAC Y</text>
+
+      <!-- ── ANALOG: DAC X → Galvo X (+5V/-5V pair) ────────── -->
+      <path d="M 1109 312 L 1109 265 L 1092 265 L 1092 150" stroke="#EA580C" stroke-width="2.5" fill="none" marker-end="url(#arr-org)"/>
+      <path d="M 1109 316 L 1113 265 L 1113 155" stroke="#1F2937" stroke-width="2" fill="none" stroke-dasharray="4,2"/>
+      <rect x="1065" y="252" width="70" height="14" rx="3" fill="white" stroke="#EA580C" stroke-width="1"/>
+      <text x="1100" y="262" font-family="Arial" font-size="8" fill="#C2410C" text-anchor="middle" font-weight="bold">±5V Vout X</text>
+
+      <!-- ── ANALOG: DAC Y → Galvo Y ────────────────────────── -->
+      <path d="M 1309 312 L 1309 265 L 1292 265 L 1292 150" stroke="#EA580C" stroke-width="2.5" fill="none" marker-end="url(#arr-org)"/>
+      <path d="M 1309 316 L 1313 265 L 1313 155" stroke="#1F2937" stroke-width="2" fill="none" stroke-dasharray="4,2"/>
+      <rect x="1275" y="252" width="70" height="14" rx="3" fill="white" stroke="#EA580C" stroke-width="1"/>
+      <text x="1310" y="262" font-family="Arial" font-size="8" fill="#C2410C" text-anchor="middle" font-weight="bold">±5V Vout Y</text>
+
+      <!-- ── GPIO: Arduino → Relay CTRL ──────────────────────── -->
+      <path d="M 710 420 L 710 528 L 700 528 L 700 575" stroke="#9333EA" stroke-width="2" fill="none" marker-end="url(#arr-pur)"/>
+      <rect x="668" y="480" width="70" height="14" rx="3" fill="white" stroke="#9333EA" stroke-width="1"/>
+      <text x="703" y="490" font-family="Arial" font-size="8" fill="#7E22CE" text-anchor="middle" font-weight="bold">GPIO ctrl</text>
+
+      <!-- ── GPIO: Arduino → Laser Driver TTL ──────────────── -->
+      <path d="M 760 425 L 760 540 L 878 540 L 878 575" stroke="#9333EA" stroke-width="2" fill="none" marker-end="url(#arr-pur)"/>
+      <rect x="790" y="525" width="60" height="14" rx="3" fill="white" stroke="#9333EA" stroke-width="1"/>
+      <text x="820" y="535" font-family="Arial" font-size="8" fill="#7E22CE" text-anchor="middle" font-weight="bold">TTL fire</text>
+
+      <!-- ── GPIO: Arduino → LEDs IR (PWM) ─────────────────── -->
+      <path d="M 620 420 L 540 420 L 540 460 L 140 460 L 140 410 L 78 410" stroke="#0891B2" stroke-width="2" fill="none" marker-end="url(#arr-blu)"/>
+      <rect x="320" y="447" width="60" height="14" rx="3" fill="white" stroke="#0891B2" stroke-width="1"/>
+      <text x="350" y="457" font-family="Arial" font-size="8" fill="#0E7490" text-anchor="middle" font-weight="bold">PWM LED</text>
+
+      <!-- ── Radar → Arduino (UART) ─────────────────────────── -->
+      <path d="M 593 585 L 593 518 L 640 518 L 640 420" stroke="#F59E0B" stroke-width="2" fill="none" marker-end="url(#arr-yel)"/>
+      <rect x="548" y="505" width="60" height="14" rx="3" fill="white" stroke="#F59E0B" stroke-width="1"/>
+      <text x="578" y="515" font-family="Arial" font-size="8" fill="#92400E" text-anchor="middle" font-weight="bold">UART detect</text>
+
+      <!-- ── Radar → Relay coil (HW override) ──────────────── -->
+      <path d="M 593 667 L 593 695 L 695 695 L 695 665" stroke="#DC2626" stroke-width="2" fill="none" stroke-dasharray="5,3" marker-end="url(#arr-red)"/>
+      <rect x="612" y="682" width="75" height="14" rx="3" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+      <text x="649" y="692" font-family="Arial" font-size="8" fill="#DC2626" text-anchor="middle" font-weight="bold">HW override</text>
+
+      <!-- ── Relay NC → Laser Driver 12V ───────────────────── -->
+      <path d="M 793 590 L 830 590 L 830 575 L 870 575" stroke="#DC2626" stroke-width="3" fill="none" marker-end="url(#arr-red)"/>
+      <rect x="808" y="578" width="55" height="14" rx="3" fill="white" stroke="#DC2626" stroke-width="1"/>
+      <text x="835" y="588" font-family="Arial" font-size="8" fill="#DC2626" text-anchor="middle" font-weight="bold">12V switched</text>
+
+      <!-- ── Laser Driver → Laser 450nm ────────────────────── -->
+      <path d="M 1006 610 L 1200 610 L 1200 500 L 1380 500 L 1380 123" stroke="#2563EB" stroke-width="2.5" fill="none" marker-end="url(#arr-blu)"/>
+      <rect x="1140" y="597" width="60" height="14" rx="3" fill="white" stroke="#2563EB" stroke-width="1"/>
+      <text x="1170" y="607" font-family="Arial" font-size="8" fill="#1D4ED8" text-anchor="middle" font-weight="bold">Laser L+/L-</text>
+
+      <!-- ── 12V: PSU → Buck IN ─────────────────────────────── -->
+      <path d="M 180 868 L 250 868" stroke="#DC2626" stroke-width="4" fill="none" marker-end="url(#arr-red)"/>
+      <text x="215" y="862" font-family="Arial" font-size="9" font-weight="bold" fill="#DC2626" text-anchor="middle">+12V</text>
+      <path d="M 180 878 L 250 878" stroke="#1F2937" stroke-width="3" fill="none"/>
+      <text x="215" y="890" font-family="Arial" font-size="9" fill="#1F2937" text-anchor="middle">GND</text>
+
+      <!-- ── 5V: Buck → RPi ─────────────────────────────────── -->
+      <path d="M 267 921 L 267 970 L 290 970 L 290 490 L 285 490 L 285 420" stroke="#EF4444" stroke-width="2.5" fill="none" marker-end="url(#arr-red)"/>
+      <rect x="250" y="620" width="45" height="14" rx="3" fill="white" stroke="#EF4444" stroke-width="1"/>
+      <text x="272" y="630" font-family="Arial" font-size="8" fill="#DC2626" text-anchor="middle" font-weight="bold">5V→RPi</text>
+
+      <!-- ── 5V: Buck → Arduino ─────────────────────────────── -->
+      <path d="M 278 921 L 278 980 L 660 980 L 660 430 L 620 430" stroke="#EF4444" stroke-width="2.5" fill="none" marker-end="url(#arr-red)" stroke-dasharray="7,2"/>
+      <rect x="430" y="966" width="60" height="14" rx="3" fill="white" stroke="#EF4444" stroke-width="1"/>
+      <text x="460" y="976" font-family="Arial" font-size="8" fill="#DC2626" text-anchor="middle" font-weight="bold">5V→Arduino</text>
+
+      <!-- ── 12V: PSU → 12V Bus rail ─────────────────────────── -->
+      <path d="M 180 860 L 200 860 L 200 1040" stroke="#DC2626" stroke-width="3" fill="none"/>
+      <path d="M 180 880 L 210 880 L 210 1065" stroke="#1F2937" stroke-width="2.5" fill="none"/>
+
+      <!-- ── 12V Bus → Relay contact ─────────────────────────── -->
+      <path d="M 793 585 L 793 560 L 750 560 L 750 1040" stroke="#DC2626" stroke-width="2" fill="none" stroke-dasharray="5,3"/>
+      <text x="760" y="552" font-family="Arial" font-size="8" fill="#DC2626" text-anchor="middle">12V in</text>
+
+      <!-- ── 12V: PSU → Galvo Driver power ──────────────────── -->
+      <path d="M 1350 1040 L 1350 960 L 1092 960 L 1092 220 L 1062 220 L 1062 148" stroke="#DC2626" stroke-width="2" fill="none" stroke-dasharray="6,3"/>
+      <text x="1220" y="955" font-family="Arial" font-size="9" fill="#DC2626" text-anchor="middle" font-weight="bold">±15V Galvo driver</text>
+      <path d="M 1350 1040 L 1350 960 L 1292 960 L 1292 220 L 1262 220 L 1262 148" stroke="#DC2626" stroke-width="2" fill="none" stroke-dasharray="6,3"/>
+
+      <!-- ── GND shared ────────────────────────────────────── -->
+      <path d="M 285 440 L 285 478 L 175 478 L 175 1065" stroke="#1F2937" stroke-width="1.5" fill="none" stroke-dasharray="4,3"/>
+      <path d="M 670 420 L 670 505 L 608 505 L 608 1065" stroke="#1F2937" stroke-width="1.5" fill="none" stroke-dasharray="4,3"/>
+
+    </g><!-- /wires -->
+
+    <!-- ═══════════════════════════════════════════════════════════
+         WIRE SIGNAL LABELS (callouts flotantes)
+    ═══════════════════════════════════════════════════════════ -->
+    <g id="signal-labels" font-family="'Courier New',monospace" font-size="9">
+      <!-- SPI label en el bus -->
+      <rect x="925" y="278" width="100" height="28" rx="4" fill="white" stroke="#16A34A" stroke-width="1.2"/>
+      <text x="975" y="289" fill="#166534" text-anchor="middle" font-weight="bold">SPI MOSI/CLK</text>
+      <text x="975" y="300" fill="#16A34A" text-anchor="middle">CS1=DAC-X CS2=DAC-Y</text>
+      <line x1="925" y1="292" x2="900" y2="340" stroke="#16A34A" stroke-width=".8" stroke-dasharray="3,2"/>
+
+      <!-- Opamp label entre DAC y Galvo -->
+      <rect x="1120" y="210" width="90" height="28" rx="4" fill="white" stroke="#EA580C" stroke-width="1.2"/>
+      <text x="1165" y="221" fill="#C2410C" text-anchor="middle" font-weight="bold">Opamp TL072</text>
+      <text x="1165" y="232" fill="#EA580C" text-anchor="middle">0-4V → ±5V</text>
+
+      <!-- Laser warning -->
+      <rect x="1600" y="88" width="130" height="42" rx="4" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+      <text x="1665" y="103" fill="#DC2626" text-anchor="middle" font-weight="bold" font-size="10">⚠ CLASE 3B</text>
+      <text x="1665" y="115" fill="#DC2626" text-anchor="middle">Gafas OD4+ 450nm</text>
+      <text x="1665" y="126" fill="#DC2626" text-anchor="middle" font-size="8">OBLIGATORIAS Fase 4</text>
+
+      <!-- 3 capas seguridad nota -->
+      <rect x="410" y="510" width="195" height="55" rx="4" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+      <text x="507" y="525" fill="#DC2626" text-anchor="middle" font-weight="bold" font-size="10">3 CAPAS DE SEGURIDAD HW</text>
+      <text x="507" y="538" fill="#991B1B" text-anchor="middle" font-size="8">1. Radar → corta alimentacion</text>
+      <text x="507" y="550" fill="#991B1B" text-anchor="middle" font-size="8">2. Watchdog → falla RPi → OFF</text>
+      <text x="507" y="562" fill="#991B1B" text-anchor="middle" font-size="8">3. Relay NC → default OFF</text>
+
+    </g>
+
+    <!-- Footer del diagrama -->
+    <text x="1200" y="1290" font-family="Arial" font-size="11" fill="#94A3B8" text-anchor="middle">SCD-FE v2.0 — Diagrama de Conexiones Electronicas — Javier Oswaldo Haro Guerrero — Tepatitlan de Morelos, Jalisco — 2026</text>
+
+  </svg>
+</div>
+
+<!-- Leyenda -->
+<div class="legend">
+  <div class="leg-title">SEÑALES</div>
+  <div class="leg-item"><div class="leg-line" style="background:#DC2626"></div>+12V alimentacion</div>
+  <div class="leg-item"><div class="leg-line" style="background:#EF4444"></div>+5V alimentacion</div>
+  <div class="leg-item"><div class="leg-line" style="background:#1F2937"></div>GND tierra comun</div>
+  <div class="leg-item"><div class="leg-line" style="background:#CA8A04"></div>UART serial (RPi↔Arduino)</div>
+  <div class="leg-item"><div class="leg-line" style="background:#16A34A"></div>SPI (Arduino→DAC)</div>
+  <div class="leg-item"><div class="leg-line" style="background:#EA580C"></div>Analogico ±5V (galvos)</div>
+  <div class="leg-item"><div class="leg-line" style="background:#9333EA"></div>GPIO control</div>
+  <div class="leg-item"><div class="leg-line" style="background:#2563EB"></div>TTL laser / señal</div>
+  <div class="leg-item"><div class="leg-line" style="background:#0891B2"></div>PWM (LEDs IR)</div>
+  <div class="leg-item"><div class="leg-line" style="background:#F59E0B"></div>Radar → Arduino</div>
+  <div class="leg-item"><div class="leg-dashed" style="border-top-color:#DC2626"></div>12V switched / override HW</div>
+  <div class="leg-item"><div class="leg-line" style="background:#D97706;height:2px"></div>CSI ribbon (camara)</div>
+</div>
+
+<!-- Info -->
+<div class="info">
+  <div class="info-title">💡 Navegacion</div>
+  <div class="info-body">
+    Scroll para zoom · Arrastrar para mover<br>
+    Hover sobre componentes para ver detalles<br>
+    Boton <strong>Señales</strong> para ocultar/mostrar etiquetas de cables
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div id="tooltip"></div>
+
+<script>
+// ─── PAN + ZOOM ──────────────────────────────────────────────────────────────
+const wrap = document.getElementById('wrap');
+const svg  = document.getElementById('svg');
+let scale=0.65, tx=0, ty=0, dragging=false, lastX=0, lastY=0;
+let labelsVisible=true;
+
+function applyTransform(){
+  svg.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+}
+
+// Center on load
+window.addEventListener('load',()=>{
+  const ww=window.innerWidth, wh=window.innerHeight;
+  tx=(ww-2400*scale)/2; ty=(wh-1320*scale)/2;
+  applyTransform();
+});
+
+wrap.addEventListener('mousedown',e=>{
+  if(e.button!==0)return;
+  dragging=true; lastX=e.clientX; lastY=e.clientY;
+  e.preventDefault();
+});
+window.addEventListener('mouseup',()=>dragging=false);
+window.addEventListener('mousemove',e=>{
+  if(!dragging)return;
+  tx+=e.clientX-lastX; ty+=e.clientY-lastY;
+  lastX=e.clientX; lastY=e.clientY;
+  applyTransform();
+});
+
+wrap.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const factor=e.deltaY>0?0.9:1.1;
+  const rect=wrap.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  tx=mx-(mx-tx)*factor; ty=my-(my-ty)*factor;
+  scale*=factor; scale=Math.max(0.2,Math.min(3,scale));
+  applyTransform();
+},{passive:false});
+
+// Touch
+let t0={},tpd=0;
+wrap.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches) t0[t.identifier]={x:t.clientX,y:t.clientY};
+  const ids=Object.keys(t0);
+  if(ids.length===2){tpd=Math.hypot(t0[ids[0]].x-t0[ids[1]].x,t0[ids[0]].y-t0[ids[1]].y);}
+  lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+},{passive:false});
+wrap.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches) if(t0[t.identifier]) t0[t.identifier]={x:t.clientX,y:t.clientY};
+  const ids=Object.keys(t0);
+  if(ids.length===1){
+    tx+=e.touches[0].clientX-lastX; ty+=e.touches[0].clientY-lastY;
+    lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+    applyTransform();
+  }
+  if(ids.length>=2){
+    const nd=Math.hypot(t0[ids[0]].x-t0[ids[1]].x,t0[ids[0]].y-t0[ids[1]].y);
+    const f=nd/tpd;
+    const mx=(t0[ids[0]].x+t0[ids[1]].x)/2;
+    const my=(t0[ids[0]].y+t0[ids[1]].y)/2;
+    const rect=wrap.getBoundingClientRect();
+    const cmx=mx-rect.left, cmy=my-rect.top;
+    tx=cmx-(cmx-tx)*f; ty=cmy-(cmy-ty)*f;
+    scale=Math.max(0.2,Math.min(3,scale*f)); tpd=nd;
+    applyTransform();
+  }
+},{passive:false});
+wrap.addEventListener('touchend',e=>{
+  for(const t of e.changedTouches) delete t0[t.identifier];
+},{passive:true});
+
+function zoom(f){
+  const cx=window.innerWidth/2, cy=window.innerHeight/2;
+  tx=cx-(cx-tx)*f; ty=cy-(cy-ty)*f;
+  scale=Math.max(0.2,Math.min(3,scale*f));
+  applyTransform();
+}
+
+function resetView(){
+  scale=0.65; const ww=window.innerWidth,wh=window.innerHeight;
+  tx=(ww-2400*scale)/2; ty=(wh-1320*scale)/2;
+  applyTransform();
+}
+
+function toggleLabels(){
+  labelsVisible=!labelsVisible;
+  document.getElementById('signal-labels').style.display=labelsVisible?'block':'none';
+}
+
+// ─── TOOLTIP ─────────────────────────────────────────────────────────────────
+const tooltip=document.getElementById('tooltip');
+document.querySelectorAll('[data-tip]').forEach(el=>{
+  el.style.cursor='pointer';
+  el.addEventListener('mouseenter',e=>{
+    tooltip.style.display='block';
+    tooltip.innerHTML=el.getAttribute('data-tip').replace(/\n/g,'<br>');
+  });
+  el.addEventListener('mousemove',e=>{
+    tooltip.style.left=(e.clientX+14)+'px';
+    tooltip.style.top=(e.clientY+10)+'px';
+  });
+  el.addEventListener('mouseleave',()=>{
+    tooltip.style.display='none';
+  });
+});
+</script>
+</body>
+</html>
